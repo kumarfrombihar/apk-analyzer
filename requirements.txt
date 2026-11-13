@@ -1,3 +1,4 @@
 streamlit
 androguard
 ollama
+jsonschema>=4.20,<5

@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apk-signal.invalid/report.schema.json",
+  "title": "APK Signal forensic triage report",
+  "type": "object",
+  "required": [
+    "schema_version", "package_format", "source_evidence", "analysis_metadata", "run",
+    "evidence_ledger", "destinations", "static_traces", "coverage", "triage_summary",
+    "analyst_notes", "components"
+  ],
+  "properties": {
+    "schema_version": {"enum": ["2.0", "2.1"]},
+    "package_format": {"enum": ["APK", "APKM", "XAPK", "APKS"]},
+    "source_evidence": {"$ref": "#/$defs/sourceEvidence"},
+    "analysis_metadata": {
+      "type": "object",
+      "required": ["analyzer", "analyzer_version", "analysis_type", "runtime_observed", "limitations"],
+      "properties": {
+        "analyzer": {"type": "string"},
+        "analyzer_version": {"type": "string"},
+        "androguard_version": {"type": "string"},
+        "analysis_type": {"const": "static"},
+        "runtime_observed": {"const": false},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "run": {
+      "type": "object",
+      "required": ["started_utc", "completed_utc"],
+      "properties": {
+        "started_utc": {"type": "string", "format": "date-time"},
+        "completed_utc": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "bundle": {"type": ["object", "null"]},
+    "evidence_ledger": {"type": "array", "items": {"$ref": "#/$defs/ledgerEntry"}},
+    "destinations": {"type": "array", "items": {"$ref": "#/$defs/destination"}},
+    "hosts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["host", "destination_count", "statuses", "noise_hidden", "flags"],
+        "properties": {
+          "host": {"type": "string"}, "destination_count": {"type": "integer", "minimum": 0},
+          "statuses": {"type": "array", "items": {"type": "string"}},
+          "noise_hidden": {"type": "boolean"}, "flags": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    },
+    "static_traces": {"type": "array", "items": {"type": "object"}},
+    "runtime_evidence": {"type": "object"},
+    "coverage": {"$ref": "#/$defs/coverage"},
+    "functionality_summary": {
+      "type": "object",
+      "required": ["summary_type", "summary", "identity", "functional_areas", "application_component_names", "workflow_indicators", "workflow_order_established", "manifest_component_counts", "manifest_component_name_samples", "permission_groups", "api_behavior_hints", "sensitive_data_access_indicators", "network_surface", "runtime_observed", "source_to_sink_tracing_performed", "limitations"],
+      "properties": {
+        "summary_type": {"const": "static_functionality_estimate"},
+        "summary": {"type": "string"},
+        "identity": {"type": "object"},
+        "functional_areas": {"type": "array", "items": {"type": "object"}},
+        "application_component_names": {"type": "array", "items": {"type": "string"}},
+        "workflow_indicators": {"type": "array", "items": {"type": "object"}},
+        "workflow_order_established": {"type": "boolean"},
+        "manifest_component_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "manifest_component_name_samples": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+        "permission_groups": {"type": "array", "items": {"type": "object"}},
+        "api_behavior_hints": {"type": "array", "items": {"type": "object"}},
+        "sensitive_data_access_indicators": {"type": "array", "items": {"type": "string"}},
+        "network_surface": {"type": "object"},
+        "runtime_observed": {"type": "boolean"},
+        "source_to_sink_tracing_performed": {"type": "boolean"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "triage_summary": {
+      "type": "object",
+      "required": ["assessment", "not_established", "next_evidence_needed"],
+      "properties": {
+        "assessment": {"type": "string"},
+        "evidence_ledger_ids": {"type": "array", "items": {"type": "string"}},
+        "not_established": {"type": "array", "items": {"type": "string"}},
+        "next_evidence_needed": {"type": "array", "items": {"type": "string"}},
+        "highlighted_destinations": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "analyst_notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["note", "evidence_ledger_ids"],
+        "properties": {
+          "note": {"type": "string"},
+          "evidence_ledger_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "errors": {"type": "array"},
+    "case_record": {"type": "object"},
+    "examiner_external_queries": {"type": "array"},
+    "components": {"type": "array", "items": {"$ref": "#/$defs/component"}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"schema_version": {"const": "2.1"}}},
+      "then": {
+        "required": ["runtime_evidence", "hosts"],
+        "properties": {"runtime_evidence": {"$ref": "#/$defs/runtimeEvidenceV21"}}
+      }
+    }
+  ],
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sourceEvidence": {
+      "type": "object",
+      "required": ["filename", "size_bytes", "sha256", "evidence_ledger_id"],
+      "properties": {
+        "filename": {"type": "string"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "evidence_ledger_id": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "runtimeEvidenceV21": {
+      "type": "object",
+      "required": ["status", "entries"],
+      "properties": {
+        "status": {"enum": ["none_imported", "imported"]},
+        "entries": {"type": "array", "items": {"type": "object"}},
+        "source_file": {"type": "object"}, "tool_name": {"type": ["string", "null"]},
+        "tool_version": {"type": ["string", "null"]},
+        "capture_environment_notes": {"type": ["string", "null"]},
+        "capture_start_as_claimed": {"type": ["string", "null"]},
+        "capture_end_as_claimed": {"type": ["string", "null"]},
+        "imported_at_utc": {"type": "string", "format": "date-time"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "ledgerEntry": {
+      "type": "object",
+      "required": ["id", "tier", "container", "entry_path", "locator", "extraction_method", "decode_chain", "raw_value", "raw_value_sha256"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "tier": {"enum": ["package_fact", "static_indicator", "static_trace_step", "runtime_observation"]},
+        "container": {
+          "type": "object", "required": ["name", "sha256"],
+          "properties": {"name": {"type": "string"}, "sha256": {"$ref": "#/$defs/hash"}},
+          "additionalProperties": false
+        },
+        "entry_path": {"type": "string"},
+        "locator": {
+          "type": "object", "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["dex", "dex_code", "manifest", "resource", "raw_file", "native", "unresolved"]},
+            "dex_file": {"type": ["string", "null"]},
+            "string_idx": {"type": ["integer", "null"]},
+            "decoded_via": {"type": "string"},
+            "class": {"type": "string"},
+            "method_sig": {"type": "string"},
+            "code_offset": {"type": ["integer", "null"]},
+            "code_offset_units": {"type": "integer"},
+            "xref_offset": {"type": ["integer", "null"]},
+            "instruction_index": {"type": "integer"},
+            "path": {"type": "string"},
+            "attribute": {"type": "string"},
+            "byte_offset": {"type": ["integer", "null"]},
+            "length_bytes": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": true
+        },
+        "extraction_method": {"type": "string"},
+        "decode_chain": {"type": "array", "items": {"type": "object"}},
+        "raw_value": {"type": "string"},
+        "raw_value_sha256": {"$ref": "#/$defs/hash"}
+      },
+      "additionalProperties": false
+    },
+    "destination": {
+      "type": "object",
+      "required": ["id", "kind", "normalized", "raw_evidence_ids", "occurrences", "observation_status", "unknowns", "indicators", "noise", "attribution"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "kind": {"enum": ["url", "domain", "ip", "websocket", "webhook", "bucket", "broker", "phone", "email", "firebase"]},
+        "display": {"type": "string"},
+        "normalized": {
+          "type": "object", "required": ["scheme", "host", "port", "path", "query_keys"],
+          "properties": {
+            "scheme": {"type": ["string", "null"]}, "host": {"type": "string"},
+            "port": {"type": ["integer", "null"]}, "path": {"type": ["string", "null"]},
+            "query_keys": {"type": "array", "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": true
+        },
+        "raw_evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ledger_id", "container", "component", "locator_kind"],
+            "properties": {
+              "ledger_id": {"type": "string"}, "container": {"type": "string"},
+              "component": {"type": "string"}, "locator_kind": {"type": "string"},
+              "attribution": {"oneOf": [{"type": "string"}, {"type": "object"}]}
+            },
+            "additionalProperties": true
+          }
+        },
+        "observation_status": {"enum": ["literal_only", "referenced_by_code", "reaches_sink_argument", "runtime_observed"]},
+        "xref_state": {"enum": ["found", "none_found", "unavailable"]},
+        "unknowns": {"type": "array", "items": {"type": "string"}},
+        "indicators": {"type": "array", "items": {"type": "object", "required": ["name", "rationale"], "properties": {"name": {"type": "string"}, "rationale": {"type": "string"}}}},
+        "noise": {"type": "object", "required": ["class", "hidden_by_default"], "properties": {"class": {"type": "string"}, "hidden_by_default": {"type": "boolean"}}, "additionalProperties": true},
+        "attribution": {"type": "object", "required": ["class"], "properties": {"class": {"type": "string"}, "rule": {"type": ["string", "array"]}, "rules": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": true}
+      },
+      "additionalProperties": true
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["data_flow_analysis_status", "reason", "counts", "not_modeled", "negative_result_statement"],
+      "properties": {
+        "data_flow_analysis_status": {"enum": ["performed", "partial", "not_performed"]},
+        "reason": {"type": "string"}, "counts": {"type": "object"},
+        "not_modeled": {"type": "array", "items": {"type": "string"}},
+        "negative_result_statement": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "component": {
+      "type": "object",
+      "required": ["evidence", "package", "network_indicators", "endpoint_analysis", "data_flow_findings", "data_flow_analysis_status", "coverage", "behavior_analysis", "evidence_ledger_ids", "component_evidence_ledger_id"],
+      "properties": {
+        "evidence": {"type": "object"}, "package": {"type": "string"},
+        "network_indicators": {"type": "object"}, "endpoint_analysis": {"type": "array"},
+        "data_flow_findings": {"type": "array"},
+        "data_flow_analysis_status": {"type": "object", "required": ["status", "reason"], "properties": {"status": {"enum": ["performed", "partial", "not_performed"]}, "reason": {"type": "string"}}},
+        "coverage": {"type": "object"}, "behavior_analysis": {"type": "object"},
+        "evidence_ledger_ids": {"type": "array", "items": {"type": "string"}},
+        "component_evidence_ledger_id": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
